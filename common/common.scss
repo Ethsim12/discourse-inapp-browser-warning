@@ -24,3 +24,10 @@ html.inapp-browser .login-modal,
 html.inapp-browser .login-modal .modal-body {
   min-height: 140px;
 }
+
+html.inapp-browser .header-buttons .login-button,
+html.inapp-browser button.login-button,
+html.inapp-browser .sign-up-button,
+html.inapp-browser .login-button {
+  display: none !important;
+}
