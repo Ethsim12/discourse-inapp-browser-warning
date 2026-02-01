@@ -1,0 +1,11 @@
+inapp_browser_warning_enabled:
+  default: true
+  type: bool
+
+inapp_browser_warning_message:
+  default: "You appear to be using an in-app browser (e.g. Snapchat/Instagram). For sign-in to work reliably, please open this page in Safari."
+  type: string
+
+inapp_browser_warning_ua_substrings:
+  default: "Snapchat|Instagram|FBAN|FBAV|TikTok|LinkedInApp|Twitter"
+  type: list
