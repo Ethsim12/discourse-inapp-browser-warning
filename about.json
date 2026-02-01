@@ -1,0 +1,7 @@
+{
+  "name": "In-app Browser Warning (OIDC)",
+  "about_url": "https://github.com/Ethsim12/discourse-inapp-browser-warning",
+  "license_url": "https://github.com/Ethsim12/discourse-inapp-browser-warning/blob/dev/LICENSE",
+  "authors": "Ethan Mees",
+  "component": true
+}
