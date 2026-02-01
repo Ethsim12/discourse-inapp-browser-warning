@@ -1,18 +1,25 @@
 import { withPluginApi } from "discourse/lib/plugin-api";
 
-function isProbablyInAppBrowser() {
+function isInAppBrowser() {
   const ua = (navigator && navigator.userAgent) || "";
-  return /snapchat|instagram|fban|fbav|fb_iab|fbios|facebook|linkedinapp|tiktok|line/i.test(
-    ua
-  );
+  return /snapchat|instagram|fban|fbav|fb_iab|linkedinapp|tiktok|line/i.test(ua);
 }
 
-function getCanonicalUrl() {
+function isLoggedIn() {
+  // Works on Discourse: if currentUser exists, you're logged in
+  return !!(window.Discourse && Discourse.User && Discourse.User.current());
+}
+
+function canonicalUrl() {
   const canonical = document.querySelector('link[rel="canonical"]');
   return (canonical && canonical.href) || window.location.href;
 }
 
 function ensureOverlay() {
+  if (!document.documentElement.classList.contains("inapp-browser")) {
+    document.documentElement.classList.add("inapp-browser");
+  }
+
   if (document.getElementById("inapp-browser-warning-overlay")) return;
 
   if (!document.body) {
@@ -20,22 +27,22 @@ function ensureOverlay() {
     return;
   }
 
-  const url = getCanonicalUrl();
+  const url = canonicalUrl();
 
   const overlay = document.createElement("div");
   overlay.id = "inapp-browser-warning-overlay";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-
   overlay.style.position = "fixed";
-  overlay.style.inset = "0";
+  overlay.style.left = "0";
+  overlay.style.right = "0";
+  overlay.style.top = "0";
+  overlay.style.bottom = "0";
   overlay.style.zIndex = "2147483647";
   overlay.style.background = "rgba(0,0,0,0.86)";
   overlay.style.color = "#fff";
-  overlay.style.padding = "18px";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
   overlay.style.justifyContent = "center";
+  overlay.style.padding = "18px";
 
   const card = document.createElement("div");
   card.style.maxWidth = "520px";
@@ -45,138 +52,92 @@ function ensureOverlay() {
   card.style.borderRadius = "12px";
   card.style.padding = "16px";
 
-  const title = document.createElement("div");
-  title.textContent = "Login won’t work in this in-app browser";
-  title.style.fontSize = "18px";
-  title.style.fontWeight = "700";
-  title.style.marginBottom = "10px";
+  const h = document.createElement("div");
+  h.textContent = "Login won’t work inside Snapchat / in-app browsers";
+  h.style.fontWeight = "700";
+  h.style.fontSize = "18px";
+  h.style.marginBottom = "10px";
 
-  const body = document.createElement("div");
-  body.textContent =
-    "This in-app browser often blocks the cookies needed for Microsoft OpenID Connect, causing CSRF/state failures. " +
-    "Open this page in Safari (recommended) or Chrome, then log in again.";
-  body.style.fontSize = "14px";
-  body.style.lineHeight = "1.45";
-  body.style.marginBottom = "12px";
+  const p = document.createElement("div");
+  p.textContent =
+    "Snapchat’s in-app browser often blocks the cookies needed for Microsoft OpenID Connect, causing login to fail. " +
+    "Open this page in Safari or Chrome, then log in there.";
+  p.style.fontSize = "14px";
+  p.style.lineHeight = "1.45";
+  p.style.marginBottom = "12px";
 
-  const urlBox = document.createElement("div");
-  urlBox.textContent = url;
-  urlBox.style.fontSize = "12px";
-  urlBox.style.wordBreak = "break-all";
-  urlBox.style.background = "rgba(255,255,255,0.06)";
-  urlBox.style.border = "1px solid rgba(255,255,255,0.12)";
-  urlBox.style.borderRadius = "10px";
-  urlBox.style.padding = "10px";
-  urlBox.style.marginBottom = "12px";
+  const box = document.createElement("div");
+  box.textContent = url;
+  box.style.fontSize = "12px";
+  box.style.wordBreak = "break-all";
+  box.style.background = "rgba(255,255,255,0.06)";
+  box.style.border = "1px solid rgba(255,255,255,0.12)";
+  box.style.borderRadius = "10px";
+  box.style.padding = "10px";
+  box.style.marginBottom = "12px";
 
-  const row = document.createElement("div");
-  row.style.display = "flex";
-  row.style.gap = "10px";
-  row.style.flexWrap = "wrap";
-
-  const btnCopy = document.createElement("button");
-  btnCopy.type = "button";
-  btnCopy.textContent = "Copy link";
-  btnCopy.style.padding = "10px 12px";
-  btnCopy.style.borderRadius = "10px";
-  btnCopy.style.border = "1px solid rgba(255,255,255,0.2)";
-  btnCopy.style.background = "rgba(255,255,255,0.08)";
-  btnCopy.style.color = "#fff";
-  btnCopy.onclick = () => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "Copy link";
+  btn.style.padding = "10px 12px";
+  btn.style.borderRadius = "10px";
+  btn.style.border = "1px solid rgba(255,255,255,0.2)";
+  btn.style.background = "rgba(255,255,255,0.08)";
+  btn.style.color = "#fff";
+  btn.onclick = () => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).catch(() => {
-        window.prompt("Copy this link:", url);
-      });
+      navigator.clipboard.writeText(url).catch(() => window.prompt("Copy this link:", url));
     } else {
       window.prompt("Copy this link:", url);
     }
   };
 
-  const btnChrome = document.createElement("button");
-  btnChrome.type = "button";
-  btnChrome.textContent = "Open in Chrome";
-  btnChrome.style.padding = "10px 12px";
-  btnChrome.style.borderRadius = "10px";
-  btnChrome.style.border = "1px solid rgba(255,255,255,0.2)";
-  btnChrome.style.background = "rgba(255,255,255,0.08)";
-  btnChrome.style.color = "#fff";
-  btnChrome.onclick = () => {
-    // iOS will hand off to Chrome if installed, else it fails harmlessly.
-    window.location.href = url.replace(/^https?:\/\//i, "googlechrome://");
-  };
-
-  row.appendChild(btnCopy);
-  row.appendChild(btnChrome);
-
-  card.appendChild(title);
-  card.appendChild(body);
-  card.appendChild(urlBox);
-  card.appendChild(row);
-
+  card.appendChild(h);
+  card.appendChild(p);
+  card.appendChild(box);
+  card.appendChild(btn);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 }
 
 function blockOidcStart() {
-  // Block form submits and link clicks that would start /auth/oidc
-  const shouldBlock = (el) => {
-    if (!el) return false;
+  // Hard block any attempt to start /auth/oidc
+  document.addEventListener(
+    "click",
+    (e) => {
+      const a = e.target && e.target.closest && e.target.closest("a");
+      if (a) {
+        const href = (a.getAttribute("href") || "").toLowerCase();
+        if (href.indexOf("/auth/oidc") !== -1) {
+          e.preventDefault();
+          e.stopPropagation();
+          ensureOverlay();
+        }
+      }
 
-    if (el.tagName === "FORM") {
-      const action = (el.getAttribute("action") || "").toLowerCase();
-      return action.indexOf("/auth/oidc") !== -1;
-    }
-
-    const href = (el.getAttribute && el.getAttribute("href")) || "";
-    return href.toLowerCase().indexOf("/auth/oidc") !== -1;
-  };
+      // Also block the login button (opens modal)
+      const btn = e.target && e.target.closest && e.target.closest(".login-button, .sign-up-button");
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        ensureOverlay();
+      }
+    },
+    true
+  );
 
   document.addEventListener(
     "submit",
     (e) => {
-      if (shouldBlock(e.target)) {
-        ensureOverlay();
+      const form = e.target;
+      const action = (form && form.getAttribute && form.getAttribute("action")) || "";
+      if (action.toLowerCase().indexOf("/auth/oidc") !== -1) {
         e.preventDefault();
         e.stopPropagation();
+        ensureOverlay();
       }
     },
     true
-  );
-
-  document.addEventListener(
-    "click",
-    (e) => {
-      const el = e.target && e.target.closest && e.target.closest("a, button");
-      if (!el) return;
-
-      // Direct link to /auth/oidc
-      if (shouldBlock(el)) {
-        ensureOverlay();
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-
-      // Button inside a form posting to /auth/oidc
-      const form = e.target && e.target.form;
-      if (shouldBlock(form)) {
-        ensureOverlay();
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    },
-    true
-  );
-}
-
-function isLoginRelatedPath() {
-  const p = window.location.pathname || "";
-  const q = window.location.search || "";
-  return (
-    p.indexOf("/login") === 0 ||
-    p.indexOf("/auth/") === 0 ||
-    p.indexOf("/u/") === 0 ||
-    q.indexOf("csrf_detected") !== -1
   );
 }
 
@@ -184,14 +145,16 @@ export default {
   name: "inapp-browser-warning",
   initialize() {
     withPluginApi("1.8.0", (api) => {
-      if (!isProbablyInAppBrowser()) return;
+      if (!isInAppBrowser()) return;
 
-      // Make sure we never start the broken flow in the webview
+      // Always add class ASAP (for CSS)
+      document.documentElement.classList.add("inapp-browser");
+
       blockOidcStart();
 
-      // Show the overlay on login-related routes and on auth failures
       const run = () => {
-        if (isLoginRelatedPath()) ensureOverlay();
+        // Only block logged-out users; logged-in admins should be able to browse.
+        if (!isLoggedIn()) ensureOverlay();
       };
 
       run();
