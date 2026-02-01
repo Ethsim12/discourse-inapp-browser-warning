@@ -11,3 +11,16 @@
   font-size: 14px;
   line-height: 1.3;
 }
+
+html.inapp-browser a[href*="/auth/oidc"],
+html.inapp-browser form[action*="/auth/oidc"],
+html.inapp-browser button[data-provider="oidc"],
+html.inapp-browser .btn-social.oidc {
+  display: none !important;
+}
+
+/* Make the login modal content still readable if buttons disappear */
+html.inapp-browser .login-modal,
+html.inapp-browser .login-modal .modal-body {
+  min-height: 140px;
+}
